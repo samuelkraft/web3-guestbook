@@ -28,10 +28,12 @@ import avatar from "../public/avatar.jpeg";
 
 TimeAgo.addDefaultLocale(en);
 
+type Write = { message: string; address: string; timestamp: any };
+
 const Home: NextPage = () => {
   const contractAddress = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
   const contractABI = abi.abi;
-  const [allWrites, setAllWrites] = useState() as any;
+  const [allWrites, setAllWrites] = useState<Array<Write>>();
   const [currentAccount, setCurrentAccount] = useState("");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -53,7 +55,7 @@ const Home: NextPage = () => {
         );
         const writes = await guestbookPortalContract.getAllWrites();
 
-        const writesCleaned = writes.map((write) => {
+        const writesCleaned = writes.map((write: any) => {
           return {
             address: write.writer,
             timestamp: new Date(write.timestamp * 1000),
@@ -74,12 +76,11 @@ const Home: NextPage = () => {
    * Listen in for emitter events!
    */
   useEffect(() => {
-    let guestbookPortalContract;
+    let guestbookPortalContract: ethers.Contract;
 
-    const onNewWrite = (from, timestamp, message) => {
-      console.log("NewWrite", from, timestamp, message);
+    const onNewWrite = (from: string, timestamp: any, message: string) => {
       setAllWrites((prevState) => [
-        ...prevState,
+        ...(prevState as any),
         {
           address: from,
           timestamp: new Date(timestamp * 1000),
@@ -105,7 +106,7 @@ const Home: NextPage = () => {
         guestbookPortalContract.off("NewWrite", onNewWrite);
       }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const checkIfWalletIsConnected = async () => {
     try {
@@ -141,7 +142,7 @@ const Home: NextPage = () => {
    */
   useEffect(() => {
     checkIfWalletIsConnected();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   /**
    * Implement your connectWallet method here
@@ -161,6 +162,7 @@ const Home: NextPage = () => {
 
       console.log("Connected", accounts[0]);
       setCurrentAccount(accounts[0]);
+      getAllWrites();
     } catch (error) {
       console.log(error);
     }
@@ -235,8 +237,9 @@ const Home: NextPage = () => {
             >
               Metamask wallet
             </Link>{" "}
-            to leave a message. This smart contract is deployed on the Rinkeby
-            testnet, so you can gm me without spending any real gas.
+            to see the guestbook and leave a message. This contract is deployed
+            on the Rinkeby testnet, so you can gm me without spending any real
+            gas.
           </Text>
         </VStack>
         <Box p={6} background="gray.900" borderRadius={12} mb={16}>
@@ -282,9 +285,16 @@ const Home: NextPage = () => {
               </Button>
             </>
           ) : (
-            <Button colorScheme="orange" onClick={connectWallet}>
-              Connect Wallet
-            </Button>
+            <Box
+              p={12}
+              alignItems="center"
+              justifyContent="center"
+              textAlign="center"
+            >
+              <Button colorScheme="orange" onClick={connectWallet}>
+                Connect Wallet
+              </Button>
+            </Box>
           )}
         </Box>
         <Box mb={12}>
@@ -292,7 +302,11 @@ const Home: NextPage = () => {
             <VStack spacing={10}>
               {allWrites
                 .filter((write) => write.message)
-                .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                .sort(
+                  (a, b) =>
+                    new Date(b.timestamp).valueOf() -
+                    new Date(a.timestamp).valueOf()
+                )
                 .map(({ message, timestamp, address }) => {
                   return (
                     <Box key={message} w="100%">
